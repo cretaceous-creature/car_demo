@@ -1,23 +1,24 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="model" default="$(find prius_description)/urdf/prius.urdf"/>
-  <arg name="rvizconfig" default="$(find car_demo)/rviz/demo.rviz" />
-
-  <param name="robot_description1" textfile="$(arg model)"/>
-
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <env name="GAZEBO_MODEL_PATH" value="$(find prius_description)/meshes/../.."/>
     <arg name="verbose" value="true"/>
     <arg name="world_name" value="$(find car_demo)/worlds/parking_robot.world"/>
   </include>
 
+<group ns="prius">
+  <arg name="model" default="$(find prius_description)/urdf/prius.urdf"/>
+  <param name="robot_description" textfile="$(arg model)"/>
+
   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" >
+    <param name="tf_prefix" type="string" value="/prius" />
     <!-- <remap from="robot_description" to="different_robot_description" /> -->
     <!-- <remap from="joint_states" to="/prius/joint_states" /> -->
   </node>
   <node pkg="fake_localization" type="fake_localization" name="fake_localization">
     <!-- <remap from="base_pose_ground_truth" to="/prius/base_pose_ground_truth"/> -->
   </node>
-  <node pkg="tf2_ros" type="static_transform_publisher" name="very_inaccurate_odom" args="0 0 0 0 0 0 odom base_link"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="very_inaccurate_odom" args="0 0 0 0 0 0 /prius/odom /prius/base_link"/>
   <!-- node pkg="car_demo" type="joystick_translator" name="joystick_translator"/ -->
    <node pkg="car_demo" type="ps3joystick" name="ps3joystick"/>
 
@@ -29,10 +30,17 @@
     <param name="dev" value="/dev/input/js1"/>
   </node>
 
-  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description1 -urdf -x 3 -y -12 -z 0.5 -model prius"/>
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -x 3 -y -12 -z 0.5 -model prius" respawn="false" output="screen" />
+</group>
 
+<group ns="ur5">
   <include file="$(find ur_gazebo)/launch/ur5_nogazebo.launch">
   </include>
 
+  <include file="$(find ur5_moveit_config)/launch/ur5_moveit_planning_execution.launch">
+  </include>
+</group>
+
+  <arg name="rvizconfig" default="$(find car_demo)/rviz/demo.rviz" />
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
 </launch>

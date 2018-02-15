@@ -161,8 +161,8 @@ Visualization Manager:
           Show Trail: false
           Value: true
       Name: RobotModel
-      Robot Description: robot_description
-      TF Prefix: ""
+      Robot Description: /prius/robot_description
+      TF Prefix: "/prius"
       Update Interval: 0
       Value: true
       Visual Enabled: true
@@ -499,7 +499,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: chassis
+    Fixed Frame: /prius/chassis
     Frame Rate: 30
   Name: root
   Tools:

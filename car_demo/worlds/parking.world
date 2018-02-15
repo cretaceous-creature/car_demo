@@ -7193,7 +7193,7 @@
           <geometry>
             <mesh>
               <scale>0.01 0.01 0.01</scale>
-              <uri>/home/chen/ros/kinetic/src/car_demo/prius_description/meshes/hybrid_body.obj</uri>
+              <uri>model://prius_description/meshes/hybrid_body.obj</uri>
             </mesh>
           </geometry>
         </visual>
@@ -7808,7 +7808,7 @@
           <geometry>
             <mesh>
               <scale>0.01 0.01 0.01</scale>
-              <uri>/home/chen/ros/kinetic/src/car_demo/prius_description/meshes/wheel.obj</uri>
+              <uri>model://prius_description/meshes/wheel.obj</uri>
             </mesh>
           </geometry>
           <material>
@@ -7920,7 +7920,7 @@
           <geometry>
             <mesh>
               <scale>0.01 0.01 0.01</scale>
-              <uri>/home/chen/ros/kinetic/src/car_demo/prius_description/meshes/wheel.obj</uri>
+              <uri>model://prius_description/meshes/wheel.obj</uri>
             </mesh>
           </geometry>
           <material>
@@ -7998,7 +7998,7 @@
           <geometry>
             <mesh>
               <scale>0.01 0.01 0.01</scale>
-              <uri>/home/chen/ros/kinetic/src/car_demo/prius_description/meshes/wheel.obj</uri>
+              <uri>model://prius_description/meshes/wheel.obj</uri>
             </mesh>
           </geometry>
           <material>
@@ -8076,7 +8076,7 @@
           <geometry>
             <mesh>
               <scale>0.01 0.01 0.01</scale>
-              <uri>/home/chen/ros/kinetic/src/car_demo/prius_description/meshes/wheel.obj</uri>
+              <uri>model://prius_description/meshes/wheel.obj</uri>
             </mesh>
           </geometry>
           <material>
@@ -8127,7 +8127,7 @@
           <geometry>
             <mesh>
               <scale>0.01 0.01 0.01</scale>
-              <uri>/home/chen/ros/kinetic/src/car_demo/prius_description/meshes/steering_wheel.obj</uri>
+              <uri>model://prius_description/meshes/steering_wheel.obj</uri>
             </mesh>
           </geometry>
         </visual>
