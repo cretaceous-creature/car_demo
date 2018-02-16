@@ -34,9 +34,13 @@ pose_target.orientation.y = quat[1]
 pose_target.orientation.z = quat[2]
 pose_target.orientation.w = quat[3]
 pose_target.position.x = 1.18
-pose_target.position.y = -3.61
-pose_target.position.z = 0.61
+pose_target.position.y = 3.58
+pose_target.position.z = 0.6
 group.set_pose_target(pose_target)
+
+group.set_planner_id("PRMkConfigDefault")
+
+#plan1 = group.plan()
 
 group.go(wait=True)
 
