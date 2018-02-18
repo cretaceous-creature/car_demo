@@ -6,6 +6,62 @@ import rospy
 import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
+import tf.transformations
+import gazebo_msgs.srv
+import math
+import numpy
+
+target_cars = [
+'car3_0',
+'car1_0',
+'car4',
+'car1_0_clone',
+'car7_0',
+'car6_1',
+'car5_0',
+]
+
+def pose_to_matrix(pose):
+    translation = tf.transformations.translation_matrix((pose.position.x, pose.position.y, pose.position.z))
+    rotation = tf.transformations.quaternion_matrix((pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w))
+    return translation.dot(rotation)
+
+def xyz_to_mat(x, y, z):
+    return tf.transformations.translation_matrix((x, y, z))
+
+def rpy_to_mat(r, p, y):
+    return tf.transformations.euler_matrix(r, p, y)
+
+def matrix_to_pose(matrix):
+    position = geometry_msgs.msg.Point(*tuple(tf.transformations.translation_from_matrix(matrix)))
+    orientation = geometry_msgs.msg.Quaternion(*tuple(tf.transformations.quaternion_from_matrix(matrix)))
+    return geometry_msgs.msg.Pose(position, orientation)
+
+get_link_state = rospy.ServiceProxy('/gazebo/get_link_state', gazebo_msgs.srv.GetLinkState);
+
+def get_link_pose(link_name):
+    return get_link_state(link_name, '').link_state.pose
+
+# target_cars[1] and target_cars[3] work. Others might not.
+charger_name = '%s::charge_oncar::link_2' % target_cars[1]
+print charger_name
+charger_pose = get_link_pose(charger_name)
+charger_mat = pose_to_matrix(charger_pose)
+
+robot_trans = xyz_to_mat(19.5, -315.0, 1.76)
+robot_rot = rpy_to_mat(3.1416, 0, 0)
+robot_mat = robot_trans.dot(robot_rot)
+# Should be the same, or close
+#robot_pose = get_link_pose('robot::lateral_slider_link')
+#robot_mat = pose_to_matrix(robot_pose)
+
+rel_mat = numpy.linalg.inv(robot_mat).dot(charger_mat)
+
+offset = tf.transformations.translation_matrix((0, 0, 0.1))
+turnaround = tf.transformations.euler_matrix(0, math.pi, 0)
+
+target_matrix = rel_mat.dot(offset).dot(turnaround)
+target_pose = matrix_to_pose(target_matrix)
 
 moveit_commander.roscpp_initialize(sys.argv)
 rospy.init_node('move_group_python_interface_tutorial',
@@ -19,30 +75,16 @@ display_trajectory_publisher = rospy.Publisher(
                                     moveit_msgs.msg.DisplayTrajectory,
                                     queue_size=20)
 
-#group.set_pose_reference_frame("base_link")
-#group.set_end_effector_link("ee_link")
-print "============ Reference frame: %s" % group.get_planning_frame()
-print "============ End effector: %s" % group.get_end_effector_link()
-print "============ Robot Groups:"
-print robot.get_group_names()
-print robot.get_current_state()
-group.set_planning_time(10.0)
-print "default plan time %f" % group.get_planning_time()
+print "============ Reference frame:", group.get_planning_frame()
+print "============ End effector:", group.get_end_effector_link()
+print "============ Robot Groups:", robot.get_group_names()
 
 group.clear_pose_targets()
-
+group.set_planning_time(10.0)
+print "default plan time %f" % group.get_planning_time()
 group.set_goal_position_tolerance(0.0005)
-pose_target = geometry_msgs.msg.Pose()
-quat = [ -0.3043807, -0.5272029, 0.3966767, 0.6870641 ]
-pose_target.orientation.x = quat[0]
-pose_target.orientation.y = quat[1]
-pose_target.orientation.z = quat[2]
-pose_target.orientation.w = quat[3]
-pose_target.position.x = 1.19
-pose_target.position.y = 3.56
-pose_target.position.z = 0.62
-group.set_pose_target(pose_target)
 
+group.set_pose_target(target_pose)
 
 group.set_planner_id("PRMkConfigDefault")
 

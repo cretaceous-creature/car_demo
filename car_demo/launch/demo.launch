@@ -35,9 +35,11 @@
 
 <group ns="ur5">
   <include file="$(find ur_gazebo)/launch/ur5_nogazebo.launch">
+    <arg name="limited" value="true"/>
   </include>
 
   <include file="$(find ur5_moveit_config)/launch/ur5_moveit_planning_execution.launch">
+    <arg name="limited" value="true"/>
   </include>
 </group>
 
