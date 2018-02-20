@@ -38,6 +38,8 @@ def matrix_to_pose(matrix):
     orientation = geometry_msgs.msg.Quaternion(*tuple(tf.transformations.quaternion_from_matrix(matrix)))
     return geometry_msgs.msg.Pose(position, orientation)
 
+rospy.init_node('move_group_python_interface_tutorial',anonymous=True)
+
 get_link_state = rospy.ServiceProxy('/gazebo/get_link_state', gazebo_msgs.srv.GetLinkState);
 
 def get_link_pose(link_name):
@@ -70,10 +72,6 @@ while(1):
 		target_matrix = rel_mat.dot(offset).dot(turnaround)
 		target_pose = matrix_to_pose(target_matrix)
 
-		moveit_commander.roscpp_initialize(sys.argv)
-		rospy.init_node('move_group_python_interface_tutorial',
-				anonymous=True)
-
 		robot = moveit_commander.RobotCommander()
 		scene = moveit_commander.PlanningSceneInterface()
 		group = moveit_commander.MoveGroupCommander("manipulator")
@@ -87,24 +85,40 @@ while(1):
 		print "============ Robot Groups:", robot.get_group_names()
 
 		group.clear_pose_targets()
-		group.set_planning_time(10.0)
+		group.set_planning_time(5.0)
 		print "default plan time %f" % group.get_planning_time()
 		group.set_goal_position_tolerance(0.005)
 
-		group.set_pose_target(target_pose)
-
-		#firstly control x,y  x to zero, y to the y position with offset
+		#firstly move to center
 		group.set_goal_position_tolerance(0.005)
 		group.set_goal_joint_tolerance(0.005)
 		group.set_planner_id("PRMkConfigDefault")
-		joints_value = group.get_joint_value_target()
-
-		joints_value[0] = target_pose.position.y
+		joints_value = group.get_current_joint_values()
+		#joints_value[0] = target_pose.position.y  current value.
 		joints_value[1] = 0
 
 		group.set_joint_value_target(joints_value)
 		group.go(wait=True)
+		rospy.sleep(5)
+		
+		#then control x,y  x to zero, y to the y position with offset
+		robot = moveit_commander.RobotCommander()
+		scene = moveit_commander.PlanningSceneInterface()
+		group = moveit_commander.MoveGroupCommander("manipulator")
+#		joints_value = group.get_joint_value_target()
+		joints_value = group.get_current_joint_values()
+		joints_value[0] = target_pose.position.y
+		joints_value[1] = 0
+		joints_value[2] = 0
+		joints_value[3] = -1.5707
+		joints_value[4] = 0
+		joints_value[5] = -1.5707
+		joints_value[6] = 0
+		joints_value[7] = 0
 
+		group.set_joint_value_target(joints_value)
+		group.go(wait=True)
+		rospy.sleep(5)
 		#then approach
 		robot = moveit_commander.RobotCommander()
 		scene = moveit_commander.PlanningSceneInterface()

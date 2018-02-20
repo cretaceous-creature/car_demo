@@ -16,11 +16,11 @@
     <!-- <remap from="joint_states" to="/prius/joint_states" /> -->
   </node>
   <node pkg="fake_localization" type="fake_localization" name="fake_localization">
+
     <!-- <remap from="base_pose_ground_truth" to="/prius/base_pose_ground_truth"/> -->
   </node>
   <node pkg="tf2_ros" type="static_transform_publisher" name="very_inaccurate_odom" args="0 0 0 0 0 0 /prius/odom /prius/base_link"/>
   <!-- node pkg="car_demo" type="joystick_translator" name="joystick_translator"/ -->
-   <node pkg="car_demo" type="ps3joystick" name="ps3joystick"/>
 
   <!-- Run two joy nodes publishing to the same topic, just to cover two possible joystick locations -->
   <!-- node pkg="joy" type="joy_node" name="joy_node0" -->
@@ -32,6 +32,7 @@
 
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -x -98 -y -121 -z 0.5 -Y -1.66 -model prius" respawn="false" output="screen" />
 </group>
+   <node pkg="car_demo" type="ps3joystick" name="ps3joystick"/>
 
 <group ns="ur5">
   <include file="$(find ur_gazebo)/launch/ur5_nogazebo.launch">
