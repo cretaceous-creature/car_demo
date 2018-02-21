@@ -575,8 +575,8 @@
         </range>
       </ray>
       <plugin name='center_laser' filename='libgazebo_ros_block_laser.so'>
-        <topicName>/center_laser/scan</topicName>
-        <frameName>center_laser_link</frameName>
+        <topicName>/prius/center_laser/scan</topicName>
+        <frameName>/prius/center_laser_link</frameName>
       </plugin>
       <always_on>1</always_on>
       <update_rate>30</update_rate>
@@ -607,7 +607,7 @@
         </range>
       </ray>
       <plugin name='front_left_laser' filename='libgazebo_ros_laser.so'>
-        <topicName>/front_left_laser/scan</topicName>
+        <topicName>/prius/front_left_laser/scan</topicName>
         <frameName>front_left_laser_link</frameName>
       </plugin>
       <always_on>1</always_on>
@@ -639,7 +639,7 @@
         </range>
       </ray>
       <plugin name='front_right_laser' filename='libgazebo_ros_laser.so'>
-        <topicName>/front_right_laser/scan</topicName>
+        <topicName>/prius/front_right_laser/scan</topicName>
         <frameName>front_right_laser_link</frameName>
       </plugin>
       <always_on>1</always_on>
@@ -820,8 +820,8 @@
         </range>
       </ray>
       <plugin name='back_left_far_sonar_sensor' filename='libgazebo_ros_range.so'>
-        <topicName>/back_sonar/left_far_range</topicName>
-        <frameName>back_left_far_sonar_link</frameName>
+        <topicName>/prius/back_sonar/left_far_range</topicName>
+        <frameName>/prius/back_left_far_sonar_link</frameName>
       </plugin>
       <always_on>false</always_on>
       <update_rate>5</update_rate>
@@ -852,8 +852,8 @@
         </range>
       </ray>
       <plugin name='back_left_middle_sonar_sensor' filename='libgazebo_ros_range.so'>
-        <topicName>/back_sonar/left_middle_range</topicName>
-        <frameName>back_left_middle_sonar_link</frameName>
+        <topicName>/prius/back_sonar/left_middle_range</topicName>
+        <frameName>/prius/back_left_middle_sonar_link</frameName>
       </plugin>
       <always_on>false</always_on>
       <update_rate>5</update_rate>
@@ -884,8 +884,8 @@
         </range>
       </ray>
       <plugin name='back_right_far_sonar_sensor' filename='libgazebo_ros_range.so'>
-        <topicName>/back_sonar/right_far_range</topicName>
-        <frameName>back_right_far_sonar_link</frameName>
+        <topicName>/prius/back_sonar/right_far_range</topicName>
+        <frameName>/prius/back_right_far_sonar_link</frameName>
       </plugin>
       <always_on>false</always_on>
       <update_rate>5</update_rate>
@@ -916,8 +916,8 @@
         </range>
       </ray>
       <plugin name='back_right_middle_sonar_sensor' filename='libgazebo_ros_range.so'>
-        <topicName>/back_sonar/right_middle_range</topicName>
-        <frameName>back_right_middle_sonar_link</frameName>
+        <topicName>/prius/back_sonar/right_middle_range</topicName>
+        <frameName>/prius/back_right_middle_sonar_link</frameName>
       </plugin>
       <always_on>false</always_on>
       <update_rate>5</update_rate>
@@ -948,8 +948,8 @@
         </range>
       </ray>
       <plugin name='front_left_far_sonar_sensor' filename='libgazebo_ros_range.so'>
-        <topicName>/front_sonar/left_far_range</topicName>
-        <frameName>front_left_far_sonar_link</frameName>
+        <topicName>/prius/front_sonar/left_far_range</topicName>
+        <frameName>/prius/front_left_far_sonar_link</frameName>
       </plugin>
       <always_on>false</always_on>
       <update_rate>5</update_rate>
@@ -980,8 +980,8 @@
         </range>
       </ray>
       <plugin name='front_left_middle_sonar_sensor' filename='libgazebo_ros_range.so'>
-        <topicName>/front_sonar/left_middle_range</topicName>
-        <frameName>front_left_middle_sonar_link</frameName>
+        <topicName>/prius/front_sonar/left_middle_range</topicName>
+        <frameName>/prius/front_left_middle_sonar_link</frameName>
       </plugin>
       <always_on>false</always_on>
       <update_rate>5</update_rate>
@@ -1012,8 +1012,8 @@
         </range>
       </ray>
       <plugin name='front_right_far_sonar_sensor' filename='libgazebo_ros_range.so'>
-        <topicName>/front_sonar/right_far_range</topicName>
-        <frameName>front_right_far_sonar_link</frameName>
+        <topicName>/prius/front_sonar/right_far_range</topicName>
+        <frameName>/prius/front_right_far_sonar_link</frameName>
       </plugin>
       <always_on>false</always_on>
       <update_rate>5</update_rate>
@@ -1044,8 +1044,8 @@
         </range>
       </ray>
       <plugin name='front_right_middle_sonar_sensor' filename='libgazebo_ros_range.so'>
-        <topicName>/front_sonar/right_middle_range</topicName>
-        <frameName>front_right_middle_sonar_link</frameName>
+        <topicName>/prius/front_sonar/right_middle_range</topicName>
+        <frameName>/prius/front_right_middle_sonar_link</frameName>
       </plugin>
       <always_on>false</always_on>
       <update_rate>5</update_rate>
