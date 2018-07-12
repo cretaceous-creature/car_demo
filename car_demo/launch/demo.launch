@@ -42,6 +42,9 @@
   <include file="$(find ur5_moveit_config)/launch/ur5_moveit_planning_execution.launch">
     <arg name="limited" value="true"/>
   </include>
+
+  
+  <include file="$(find realsense_gazebo_plugin)/launch/depth_proc.launch" />
 </group>
 
   <arg name="rvizconfig" default="$(find car_demo)/rviz/demo.rviz" />

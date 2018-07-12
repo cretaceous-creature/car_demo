@@ -474,16 +474,17 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://car_demo/models/charge_oncar/meshes/charge_oncar.dae" scale="1 1 1"/>
+        <mesh filename="package://prius_description/meshes/charge_oncar.dae" scale="1 1 1"/>
       </geometry>
-     <material name="green">
-     <lighting>1</lighting>
-     <script>
-     <uri>file://media/materials/scripts/gazebo.material</uri>
-     <name>Gazebo/Green</name>
-     </script>
-     <emissive>0 0 0 1</emissive>
-   </material>
+      <material name="green">
+	<lighting>1</lighting>
+	  <color rgba="${0/255} ${255/255} ${0/255} 1.0"/>
+	<!-- <script> -->
+	<!-- <uri>file://usr/share/gazebo-9/media/materials/scripts/gazebo.material</uri> -->
+	<!-- <name>Gazebo/Green</name> -->
+	<!-- </script> -->
+	<!-- <emissive>0 0 0 1</emissive> -->
+      </material>
     </visual>
     <inertial>
       <mass value="0.1" />
