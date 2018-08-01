@@ -123,7 +123,7 @@ while(1):
 		robot = moveit_commander.RobotCommander()
 		scene = moveit_commander.PlanningSceneInterface()
 		group = moveit_commander.MoveGroupCommander("manipulator")
-		offset = tf.transformations.translation_matrix((0, 0, 0.06))  #with less offset
+		offset = tf.transformations.translation_matrix((0, -0.06, 0.2))  #with less offset
 
 		target_matrix = rel_mat.dot(offset).dot(turnaround)
 		target_pose = matrix_to_pose(target_matrix)
