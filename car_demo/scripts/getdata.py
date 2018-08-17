@@ -125,7 +125,7 @@ while(1):
 		robot = moveit_commander.RobotCommander()
 		scene = moveit_commander.PlanningSceneInterface()
 		group = moveit_commander.MoveGroupCommander("manipulator")
-		offset = tf.transformations.translation_matrix((0, 0.06, 0.2))
+		offset = tf.transformations.translation_matrix((0, 0.2, 0.4))
                 #with less offset
 
 		target_matrix = rel_mat.dot(offset).dot(turnaround)
@@ -134,14 +134,19 @@ while(1):
                 
                 
 		group.set_goal_position_tolerance(0.005)
-		group.set_planning_time(2.0)
+		group.set_planning_time(5.0)
 		group.set_goal_position_tolerance(0.0005)
 		group.set_planner_id("PRMkConfigDefault")
 		group.clear_pose_targets()
-                print(target_pose.position)
+#                print(target_pose.position)
                 search_x = target_pose.position.x
+                print(target_pose.orientation)
                 target_pose.position.x = 0
-                target_pose.position.y = target_pose.position.y - 0.6 * target_pose.position.y/abs(target_pose.position.y)
+                if target_pose.orientation.z < 0.5:
+                    target_pose.position.y = target_pose.position.y - 0.6
+                else:
+                    target_pose.position.y = target_pose.position.y + 0.6
+                    
 		group.set_pose_target(target_pose)
 
 		#plan1 = group.plan()
@@ -157,12 +162,30 @@ while(1):
 		scene = moveit_commander.PlanningSceneInterface()
 		group = moveit_commander.MoveGroupCommander("manipulator")
 		joints_value = group.get_current_joint_values()
+                while (1):
+                    moveoder_all = sys.stdin.readline()
+                    moveoder = moveoder_all[0]
+                    if moveoder=='q':
+                        break;
+                    elif moveoder=='w':
+                        joints_value[0] +=  0.1
+                        print("move w")
+                    elif moveoder=='s':
+                        joints_value[0] -=  0.1
+                    elif moveoder=='a':
+                        joints_value[1] +=  0.1
+                    elif moveoder=='d':
+                        joints_value[1] -=  0.1
+                    # else if moveoder=='x':
+                    #     joints_value[1] = search_x / abs(search_x) * 2
+                    # else if moveoder=='c':
+                    #     joints_value[1] = search_x / abs(search_x) * 2
+                    #execution    
+                    group.set_joint_value_target(joints_value)
+		    group.go(wait=True)
+		    rospy.sleep(0.5)
 
-		joints_value[1] = search_x / abs(search_x) * 3
-
-		group.set_joint_value_target(joints_value)
-		group.go(wait=True)
-		rospy.sleep(1)
+                        
 		print "============================Waiting for next position"
 	else:
 		moveit_commander.roscpp_shutdown()
