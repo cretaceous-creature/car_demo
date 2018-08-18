@@ -11,8 +11,12 @@ find_package(catkin REQUIRED COMPONENTS
   prius_msgs
 )
 
-find_package(gazebo 9 REQUIRED)
+find_package(gazebo 9 REQUIRED sensor_msgs)
 #find_package(ignition-msgs0 REQUIRED)
+
+generate_messages(DEPENDENCIES
+  std_msgs
+  sensor_msgs)
 
 catkin_package(
  # INCLUDE_DIRS include
