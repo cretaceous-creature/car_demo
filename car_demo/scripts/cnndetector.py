@@ -13,11 +13,13 @@ sys.path.append("/home/chen/projects/tfobdetection/models/research/object_detect
 
 #cv bridge
 from sensor_msgs.msg import Image
+from jsk_recognition_msgs.msg import Rect
 from cv_bridge import CvBridge, CvBridgeError
 
 # Import utilites
 from utils import label_map_util
 from utils import visualization_utils as vis_util
+
 
 
 class CNN_Detector:
@@ -77,7 +79,7 @@ class CNN_Detector:
         # i.e. a single-column array, where each item in the column has the pixel RGB value
 
         #boundingbox publisher
-#        self.pub_boundingbox = rospy.Publisher("/charge_detector/boundingbox", Int16, queue_size = 1)
+        self.pub_boundingbox = rospy.Publisher("/charge_detector/boundingbox", Rect, queue_size = 1)
 
         #subscribe to the image
         self.bridge = CvBridge()
@@ -103,20 +105,31 @@ class CNN_Detector:
         # Perform the actual detection by running the model with the image as input
         (boxes, scores, classes, num) = self.sess.run([self.detection_boxes, self.detection_scores, self.detection_classes, self.num_detections], feed_dict={self.image_tensor: image_expanded})
         # Draw the results of the detection (aka 'visulaize the results')
-        vis_util.visualize_boxes_and_labels_on_image_array(
-            image,
-            np.squeeze(boxes),
-            np.squeeze(classes).astype(np.int32),
-            np.squeeze(scores),
-            self.category_index,
-            use_normalized_coordinates=True,
-            line_thickness=8,
-            min_score_thresh=0.80)
-        print(boxes)
+        # vis_util.visualize_boxes_and_labels_on_image_array(
+        #     image,
+        #     np.squeeze(boxes),
+        #     np.squeeze(classes).astype(np.int32),
+        #     np.squeeze(scores),
+        #     self.category_index,
+        #     use_normalized_coordinates=True,
+        #     line_thickness=8,
+        #     min_score_thresh=0.80)
+        if len(boxes[0]) > 0 and scores[0][0] > 0.8:
+            [min_x, min_y, max_x, max_y] = boxes[0][0]
+            height, width = image.shape[:2]
+            # print(min_x * height, min_y * width, max_x * height, max_y * width)
+            # cv2.rectangle(image, (int(min_y * width), int(min_x * height)), (int(max_y * width), int(max_x * height)), (255, 0, 0), 2)
+            boundingbox = Rect()
+            boundingbox.x = int(min_y * width)
+            boundingbox.y = int(min_x * height)
+            boundingbox.width = int((max_y - min_y) * width)
+            boundingbox.height = int((max_x - min_x) * height)
+            # print(boundingbox)
+            self.pub_boundingbox.publish(boundingbox)
         # All the results have been drawn on image. Now display the image.
-        cv2.imshow('Object detector', image)
-        if cv2.waitKey(10)==ord('q'):
-            return
+        # cv2.imshow('Object detector', image)
+        # if cv2.waitKey(10)==ord('q'):
+        #     return
 
 
 if __name__ == "__main__":
