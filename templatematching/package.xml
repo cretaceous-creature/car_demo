@@ -1,0 +1,13 @@
+<package format="2">
+  <name>templatematching</name>
+  <version>0.0.1</version>
+  <description>
+  Charger template matching
+  </description>
+  <maintainer email="cxy_rampage@pku.edu.cn">xiangyu chen</maintainer>
+  <license>BSD</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>pcl_ros</depend>
+  <depend>gazebo_ros</depend>
+
+</package>

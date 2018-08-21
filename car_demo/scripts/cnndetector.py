@@ -13,7 +13,7 @@ sys.path.append("/home/chen/projects/tfobdetection/models/research/object_detect
 
 #cv bridge
 from sensor_msgs.msg import Image
-from jsk_recognition_msgs.msg import Rect
+from jsk_recognition_msgs.msg import BoundingBox
 from cv_bridge import CvBridge, CvBridgeError
 
 # Import utilites
@@ -79,11 +79,11 @@ class CNN_Detector:
         # i.e. a single-column array, where each item in the column has the pixel RGB value
 
         #boundingbox publisher
-        self.pub_boundingbox = rospy.Publisher("/charge_detector/boundingbox", Rect, queue_size = 1)
+        self.pub_boundingbox = rospy.Publisher("/charge_detector/boundingbox", BoundingBox, queue_size = 1)
 
         #subscribe to the image
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber("/realsense/camera/color/image_raw",Image,self.inference_image)
+        self.image_sub = rospy.Subscriber("/realsense/camera/color/image_raw",Image, self.inference_image)
 
 
     #delete function
@@ -119,17 +119,18 @@ class CNN_Detector:
             height, width = image.shape[:2]
             # print(min_x * height, min_y * width, max_x * height, max_y * width)
             # cv2.rectangle(image, (int(min_y * width), int(min_x * height)), (int(max_y * width), int(max_x * height)), (255, 0, 0), 2)
-            boundingbox = Rect()
-            boundingbox.x = int(min_y * width)
-            boundingbox.y = int(min_x * height)
-            boundingbox.width = int((max_y - min_y) * width)
-            boundingbox.height = int((max_x - min_x) * height)
+            boundingbox = BoundingBox()
+            boundingbox.header = data.header
+            boundingbox.pose.position.x = int(min_y * width)
+            boundingbox.pose.position.y = int(min_x * height)
+            boundingbox.dimensions.x = int((max_y - min_y) * width)
+            boundingbox.dimensions.y = int((max_x - min_x) * height)
             # print(boundingbox)
             self.pub_boundingbox.publish(boundingbox)
         # All the results have been drawn on image. Now display the image.
-        # cv2.imshow('Object detector', image)
-        # if cv2.waitKey(10)==ord('q'):
-        #     return
+            cv2.imshow('Object detector', image)
+            if cv2.waitKey(10)==ord('q'):
+                return
 
 
 if __name__ == "__main__":

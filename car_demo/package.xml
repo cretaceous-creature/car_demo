@@ -19,6 +19,8 @@
   <exec_depend>rviz</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>templatematching</exec_depend>
+
 
   <export>
     <!-- Other tools can request additional information be placed here -->
