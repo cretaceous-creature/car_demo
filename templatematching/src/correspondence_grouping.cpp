@@ -32,14 +32,14 @@
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
+#include <dynamic_reconfigure/server.h>
+#include <templatematching/matchingparamConfig.h>
+
 
 typedef pcl::PointXYZRGBA PointType;
 typedef pcl::Normal NormalType;
 typedef pcl::ReferenceFrame RFType;
 typedef pcl::SHOT352 DescriptorType;
-
-std::string model_filename_;
-std::string scene_filename_;
 
 void showHelp (char *filename)
 {
@@ -83,8 +83,6 @@ void parseCommandLine (int argc, char *argv[]) {
     exit (-1);
   }
 
-  model_filename_ = argv[filenames[0]];
-  scene_filename_ = argv[filenames[1]];
 
   //Program behavior
 //  if (pcl::console::find_switch (argc, argv, "-k"))
@@ -157,17 +155,45 @@ class TemplateMatching {
     TemplateMatching(ros::NodeHandle& n, ros::NodeHandle& np)
         : n_(n),
           np_(np),
-          show_keypoints_(show_keypoints_ = false),
-          show_correspondences_(show_correspondences_= false),
-          use_cloud_resolution_(use_cloud_resolution_= false),
-          use_hough_(use_hough_= false),
-          model_ss_(model_ss_= 0.01f),
-          scene_ss_(scene_ss_= 0.01f),
-          rf_rad_(rf_rad_= 0.015f),
-          descr_rad_(descr_rad_= 0.01f),
-          cg_size_(cg_size_= 0.01f),
-          cg_thresh_(cg_thresh_= 3.0f),
-          model_filename_("/home/chen/ros/kinetic/src/car_demo/templatematching/data/1.pcd") {
+          show_keypoints_(false),
+          show_correspondences_(false),
+          use_cloud_resolution_(false),
+          use_hough_(false),
+          model_ss_(0.01f),
+          scene_ss_(0.01f),
+          rf_rad_(0.015f),
+          descr_rad_(0.01f),
+          cg_size_(0.01f),
+          cg_thresh_(3.0f),
+          model_filename_("") {
+
+        ros::param::set("/model_filename","/home/chen/ros/kinetic/src/car_demo/templatematching/data/1.pcd");
+        ros::param::set("use_cloud_resolution", false);
+        ros::param::set("use_hough", false);
+        ros::param::set("model_ss",0.01f);
+        ros::param::set("scene_ss",  0.01f);
+        ros::param::set("rf_rad", 0.015f);
+        ros::param::set("descr_rad",  0.01f);
+        ros::param::set("cg_size", 0.01f);
+        ros::param::set("cg_thresh", 3.0f);
+
+        ros::param::param<bool>("use_cloud_resolution", use_cloud_resolution_, false);
+        ros::param::param<bool>("use_hough", use_hough_, false);
+        ros::param::param<float>("model_ss", model_ss_, 0.01f);
+        ros::param::param<float>("scene_ss", scene_ss_, 0.01f);
+        ros::param::param<float>("rf_rad", rf_rad_, 0.015f);
+        ros::param::param<float>("descr_rad", descr_rad_, 0.01f);
+        ros::param::param<float>("cg_size", cg_size_, 0.01f);
+        ros::param::param<float>("cg_thresh", cg_thresh_, 3.0f);
+        ros::param::param<std::string>("/model_filename", model_filename_, "/home/chen/ros/kinetic/src/car_demo/templatematching/data/1.pcd");
+
+
+
+
+        /*** dynamic reconfigure ***/
+        f = boost::bind(&TemplateMatching::dynamic_reconfigure_callback, this, _1,_2);
+        server.setCallback(f);
+
 
         model = pcl::PointCloud<PointType>::Ptr(new pcl::PointCloud<PointType> ());
         model_keypoints = pcl::PointCloud<PointType>::Ptr(new pcl::PointCloud<PointType> ());
@@ -181,10 +207,11 @@ class TemplateMatching {
         pcl::io::loadPCDFile(model_filename_, *model);
 
         pub_filtered = n_.advertise<sensor_msgs::PointCloud2>("/cloud_filtered", 1);
-        sub_pointcloud = new message_filters::Subscriber<sensor_msgs::PointCloud2>(n_, "/realsense/camera/depth_registered/points", 20);
+        pub_model = n_.advertise<sensor_msgs::PointCloud2>("/cloud_model", 1);
+        sub_pointcloud = new message_filters::Subscriber<sensor_msgs::PointCloud2>(n_, "/realsense/camera/depth_registered/points", 2);
         sub_boundingbox = new message_filters::Subscriber<jsk_recognition_msgs::BoundingBox>(n_, "/charge_detector/boundingbox", 2);
 
-        sync = new message_filters::Synchronizer<syncPolicy>(syncPolicy(5000), *sub_pointcloud, *sub_boundingbox);
+        sync = new message_filters::Synchronizer<syncPolicy>(syncPolicy(200), *sub_pointcloud, *sub_boundingbox);
         sync->registerCallback(boost::bind(&TemplateMatching::CloudCallBack, this, _1, _2));
     }
 
@@ -250,16 +277,45 @@ class TemplateMatching {
         return ret;
     }
 
+
+    void dynamic_reconfigure_callback(templatematching::matchingparamConfig &config, uint32_t level)
+    {
+        use_cloud_resolution_ = config.use_cloud_reso;
+        use_hough_ = config.use_hough;
+        model_ss_ = config.model_ss;
+        scene_ss_ = config.scene_ss;
+        rf_rad_ = config.rf_rad;
+        descr_rad_ = config.descr_rad;
+        cg_size_ = config.cg_size;
+        cg_thresh_ = config.cg_thresh;
+    }
+
+
+
     void CloudCallBack(const sensor_msgs::PointCloud2ConstPtr& msg_pt,
                        const jsk_recognition_msgs::BoundingBoxConstPtr& msg_box) {
-        std::cout << "Received" << std::endl;
+        ros::param::get("use_cloud_resolution", use_cloud_resolution_);
+        ros::param::get("use_hough", use_hough_);
+        ros::param::get("model_ss", model_ss_);
+        ros::param::get("scene_ss", scene_ss_);
+        ros::param::get("rf_rad", rf_rad_);
+        ros::param::get("descr_rad", descr_rad_);
+        ros::param::get("cg_size", cg_size_);
+        ros::param::get("cg_thresh", cg_thresh_);
+
+        std::cout << "Received " << use_hough_ << std::endl;
         pcl::PointCloud<PointType> scene_tmp;
         pcl::fromROSMsg(*msg_pt, scene_tmp);
         *scene = pointcloudfilter(scene_tmp, msg_box);
         sensor_msgs::PointCloud2 cloud2pub;
+        sensor_msgs::PointCloud2 cloudmodel2pub;
         pcl::toROSMsg(*scene, cloud2pub);
         cloud2pub.header = msg_pt->header;
         pub_filtered.publish(cloud2pub);
+        //publish model cloud too
+        pcl::toROSMsg(*model, cloudmodel2pub);
+        cloudmodel2pub.header = msg_pt->header;
+        pub_model.publish(cloudmodel2pub);
         //
         //  Set up resolution invariance
         //
@@ -420,6 +476,11 @@ private:
     message_filters::Subscriber<jsk_recognition_msgs::BoundingBox> *sub_boundingbox;
     message_filters::Synchronizer<syncPolicy> *sync;
     ros::Publisher pub_filtered;
+    ros::Publisher pub_model;
+
+    dynamic_reconfigure::Server<templatematching::matchingparamConfig> server;
+    dynamic_reconfigure::Server<templatematching::matchingparamConfig>::CallbackType f;
+
 };
 
 
