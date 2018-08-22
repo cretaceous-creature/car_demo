@@ -25,6 +25,7 @@
 #include <jsk_recognition_msgs/BoundingBox.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
+#include <tf/transform_datatypes.h>
 #include <boost/foreach.hpp>
 
 #include <message_filters/subscriber.h>
@@ -34,6 +35,7 @@
 
 #include <dynamic_reconfigure/server.h>
 #include <templatematching/matchingparamConfig.h>
+#include <geometry_msgs/TransformStamped.h>
 
 
 typedef pcl::PointXYZRGBA PointType;
@@ -208,6 +210,7 @@ class TemplateMatching {
 
         pub_filtered = n_.advertise<sensor_msgs::PointCloud2>("/cloud_filtered", 1);
         pub_model = n_.advertise<sensor_msgs::PointCloud2>("/cloud_model", 1);
+        pub_trans = n_.advertise<geometry_msgs::TransformStamped>("/matching_trans", 1);
         sub_pointcloud = new message_filters::Subscriber<sensor_msgs::PointCloud2>(n_, "/realsense/camera/depth_registered/points", 2);
         sub_boundingbox = new message_filters::Subscriber<jsk_recognition_msgs::BoundingBox>(n_, "/charge_detector/boundingbox", 2);
 
@@ -229,13 +232,14 @@ class TemplateMatching {
           // Print the rotation matrix and translation vector
           Eigen::Matrix3f rotation = rototranslations[i].block<3,3>(0, 0);
           Eigen::Vector3f translation = rototranslations[i].block<3,1>(0, 3);
-
-          printf ("\n");
-          printf ("            | %6.3f %6.3f %6.3f | \n", rotation (0,0), rotation (0,1), rotation (0,2));
-          printf ("        R = | %6.3f %6.3f %6.3f | \n", rotation (1,0), rotation (1,1), rotation (1,2));
-          printf ("            | %6.3f %6.3f %6.3f | \n", rotation (2,0), rotation (2,1), rotation (2,2));
-          printf ("\n");
-          printf ("        t = < %0.3f, %0.3f, %0.3f >\n", translation (0), translation (1), translation (2));
+          if(rotation (0,0)>0.7 && rotation (1,1) >0.85 &&rotation (2,2)>0.85 && rotation (0,0) !=1)
+          {    printf ("\n");
+              printf ("            | %6.3f %6.3f %6.3f | \n", rotation (0,0), rotation (0,1), rotation (0,2));
+              printf ("        R = | %6.3f %6.3f %6.3f | \n", rotation (1,0), rotation (1,1), rotation (1,2));
+              printf ("            | %6.3f %6.3f %6.3f | \n", rotation (2,0), rotation (2,1), rotation (2,2));
+              printf ("\n");
+              printf ("        t = < %0.3f, %0.3f, %0.3f >\n", translation (0), translation (1), translation (2));
+          }
         }
     }
 
@@ -294,6 +298,7 @@ class TemplateMatching {
 
     void CloudCallBack(const sensor_msgs::PointCloud2ConstPtr& msg_pt,
                        const jsk_recognition_msgs::BoundingBoxConstPtr& msg_box) {
+        /*
         ros::param::get("use_cloud_resolution", use_cloud_resolution_);
         ros::param::get("use_hough", use_hough_);
         ros::param::get("model_ss", model_ss_);
@@ -302,7 +307,7 @@ class TemplateMatching {
         ros::param::get("descr_rad", descr_rad_);
         ros::param::get("cg_size", cg_size_);
         ros::param::get("cg_thresh", cg_thresh_);
-
+*/
         std::cout << "Received " << use_hough_ << std::endl;
         pcl::PointCloud<PointType> scene_tmp;
         pcl::fromROSMsg(*msg_pt, scene_tmp);
@@ -466,6 +471,34 @@ class TemplateMatching {
         }
 
         // Publish:
+
+
+        for (size_t i = 0; i < rototranslations.size (); ++i)
+        {
+            geometry_msgs::TransformStamped trans_msg;
+            Eigen::Matrix3f rotation = rototranslations[i].block<3,3>(0, 0);
+            Eigen::Vector3f translation = rototranslations[i].block<3,1>(0, 3);
+            tf::Quaternion q;
+            tf::Matrix3x3 mat(rotation (0,0), rotation (0,1), rotation (0,2),
+                              rotation (1,0), rotation (1,1), rotation (1,2),
+                              rotation (2,0), rotation (2,1), rotation (2,2));
+
+            mat.getRotation(q); //turn to quaternion
+            tfScalar r,p,y;
+            mat.getEulerYPR(y,p,r);
+            printf("rpy angle is %lf,  %lf,  %lf \n", r ,p ,y);
+            trans_msg.transform.rotation.x = q.getX();
+            trans_msg.transform.rotation.y = q.getY();
+            trans_msg.transform.rotation.z = q.getZ();
+            trans_msg.transform.rotation.w = q.getW();
+            trans_msg.transform.translation.x = translation (0);
+            trans_msg.transform.translation.y = translation (1);
+            trans_msg.transform.translation.z = translation (2);
+            trans_msg.header = msg_pt->header;
+            trans_msg.child_frame_id = "charge_model_link";
+            if(rotation (0,0)>0.7 && rotation (1,1) >0.85 &&rotation (2,2)>0.85 && rotation (0,0) !=1)
+                pub_trans.publish(trans_msg);
+        }
         output(rototranslations, clustered_corrs);
     }
 
@@ -477,6 +510,7 @@ private:
     message_filters::Synchronizer<syncPolicy> *sync;
     ros::Publisher pub_filtered;
     ros::Publisher pub_model;
+    ros::Publisher pub_trans;
 
     dynamic_reconfigure::Server<templatematching::matchingparamConfig> server;
     dynamic_reconfigure::Server<templatematching::matchingparamConfig>::CallbackType f;

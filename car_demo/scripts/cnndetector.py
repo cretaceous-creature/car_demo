@@ -105,15 +105,15 @@ class CNN_Detector:
         # Perform the actual detection by running the model with the image as input
         (boxes, scores, classes, num) = self.sess.run([self.detection_boxes, self.detection_scores, self.detection_classes, self.num_detections], feed_dict={self.image_tensor: image_expanded})
         # Draw the results of the detection (aka 'visulaize the results')
-        # vis_util.visualize_boxes_and_labels_on_image_array(
-        #     image,
-        #     np.squeeze(boxes),
-        #     np.squeeze(classes).astype(np.int32),
-        #     np.squeeze(scores),
-        #     self.category_index,
-        #     use_normalized_coordinates=True,
-        #     line_thickness=8,
-        #     min_score_thresh=0.80)
+        vis_util.visualize_boxes_and_labels_on_image_array(
+            image,
+            np.squeeze(boxes),
+            np.squeeze(classes).astype(np.int32),
+            np.squeeze(scores),
+            self.category_index,
+            use_normalized_coordinates=True,
+            line_thickness=8,
+            min_score_thresh=0.80)
         if len(boxes[0]) > 0 and scores[0][0] > 0.8:
             [min_x, min_y, max_x, max_y] = boxes[0][0]
             height, width = image.shape[:2]
