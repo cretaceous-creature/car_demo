@@ -128,9 +128,9 @@ class CNN_Detector:
             # print(boundingbox)
             self.pub_boundingbox.publish(boundingbox)
         # All the results have been drawn on image. Now display the image.
-            cv2.imshow('Object detector', image)
-            if cv2.waitKey(10)==ord('q'):
-                return
+        cv2.imshow('Object detector', image)
+        if cv2.waitKey(10)==ord('q'):
+            return
 
 
 if __name__ == "__main__":

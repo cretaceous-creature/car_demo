@@ -190,7 +190,7 @@ class TemplateMatching {
         ros::param::param<std::string>("/model_filename", model_filename_, "/home/chen/ros/kinetic/src/car_demo/templatematching/data/1.pcd");
 
 
-
+        transformInitialized = false;
 
         /*** dynamic reconfigure ***/
         f = boost::bind(&TemplateMatching::dynamic_reconfigure_callback, this, _1,_2);
@@ -223,17 +223,16 @@ class TemplateMatching {
         //
         //  Output results
         //
-        std::cout << "Model instances found: " << rototranslations.size () << std::endl;
-        for (size_t i = 0; i < rototranslations.size (); ++i)
-        {
-          std::cout << "\n    Instance " << i + 1 << ":" << std::endl;
-          std::cout << "        Correspondences belonging to this instance: " << clustered_corrs[i].size () << std::endl;
+        // std::cout << "Model instances found: " << rototranslations.size () << std::endl;
+        for (size_t i = 0; i < rototranslations.size (); ++i) {
 
           // Print the rotation matrix and translation vector
           Eigen::Matrix3f rotation = rototranslations[i].block<3,3>(0, 0);
           Eigen::Vector3f translation = rototranslations[i].block<3,1>(0, 3);
-          if(rotation (0,0)>0.7 && rotation (1,1) >0.85 &&rotation (2,2)>0.85 && rotation (0,0) !=1)
-          {    printf ("\n");
+          if (rotation(0,0) > 0.7 && rotation(1,1) > 0.85 && rotation(2,2) > 0.85 && rotation(0,0) != 1) {
+              printf ("\n");
+              std::cout << "      Instance " << i + 1 << ":" << std::endl;
+              std::cout << "        Correspondences belonging to this instance: " << clustered_corrs[i].size () << std::endl;
               printf ("            | %6.3f %6.3f %6.3f | \n", rotation (0,0), rotation (0,1), rotation (0,2));
               printf ("        R = | %6.3f %6.3f %6.3f | \n", rotation (1,0), rotation (1,1), rotation (1,2));
               printf ("            | %6.3f %6.3f %6.3f | \n", rotation (2,0), rotation (2,1), rotation (2,2));
@@ -484,9 +483,9 @@ class TemplateMatching {
                               rotation (2,0), rotation (2,1), rotation (2,2));
 
             mat.getRotation(q); //turn to quaternion
-            tfScalar r,p,y;
-            mat.getEulerYPR(y,p,r);
-            printf("rpy angle is %lf,  %lf,  %lf \n", r ,p ,y);
+            tfScalar r, p, y;
+            mat.getEulerYPR(y, p, r);
+            printf("rpy angle is %lf,  %lf,  %lf \n", r, p, y);
             trans_msg.transform.rotation.x = q.getX();
             trans_msg.transform.rotation.y = q.getY();
             trans_msg.transform.rotation.z = q.getZ();
@@ -496,8 +495,15 @@ class TemplateMatching {
             trans_msg.transform.translation.z = translation (2);
             trans_msg.header = msg_pt->header;
             trans_msg.child_frame_id = "charge_model_link";
-            if(rotation (0,0)>0.7 && rotation (1,1) >0.85 &&rotation (2,2)>0.85 && rotation (0,0) !=1)
+            if (rotation(0,0) > 0.7 && rotation(1,1) > 0.85 && rotation(2,2) > 0.85 && rotation(0,0) != 1) {
+                transformColorBased.setOrigin(tf::Vector3(translation(0), translation(1), translation(2)));
+                transformColorBased.setRotation(q);
+                transformInitialized = true;
                 pub_trans.publish(trans_msg);
+            }
+        }
+        if (transformInitialized) {
+            br.sendTransform(tf::StampedTransform(transformColorBased, msg_pt->header.stamp, "color", "charger"));
         }
         output(rototranslations, clustered_corrs);
     }
@@ -515,6 +521,9 @@ private:
     dynamic_reconfigure::Server<templatematching::matchingparamConfig> server;
     dynamic_reconfigure::Server<templatematching::matchingparamConfig>::CallbackType f;
 
+    tf::TransformBroadcaster br;
+    tf::Transform transformColorBased;
+    bool transformInitialized;
 };
 
 

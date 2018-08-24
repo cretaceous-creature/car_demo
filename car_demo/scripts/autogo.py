@@ -7,6 +7,7 @@ import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
 import tf.transformations
+import tf
 import gazebo_msgs.srv
 import math
 import numpy
@@ -62,6 +63,8 @@ def get_link_pose(link_name):
 # the number..
 # 7 5 4 1
 # 0 6 2 3     3 wont work because it is too low..
+
+listener = tf.TransformListener()
 while(1):
 	num = int(sys.stdin.readline())
 	if num>=0 and num <8:
@@ -199,45 +202,56 @@ while(1):
                         joints_value[2] -=  0.1
                         group.set_joint_value_target(joints_value)
                     elif moveoder=='g':
-						#here we automatically attach the robot to the charger
+						try:
+							(trans, rot) = listener.lookupTransform('/ur5/world', '/charger', rospy.Time(0))
+							print("tf_trans", trans)
+						except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+							continue
+						# here we automatically attach the robot to the charger
 						current_pose = group.get_current_pose()
 						offset = tf.transformations.translation_matrix((0, 0.05, 0.05))
 						target_matrix = rel_mat.dot(offset).dot(turnaround)
 						target_pose = matrix_to_pose(target_matrix)
-						print(current_pose.pose.position.x,current_pose.pose.position.y,
+						print("current pose", current_pose.pose.position.x,current_pose.pose.position.y,
 						current_pose.pose.position.z)
-						#print the position
-						print(target_pose.position.x,target_pose.position.y,
+						# print the position
+						print("gt pose", target_pose.position.x,target_pose.position.y,
 						target_pose.position.z)		
-						#print the orientation
-						print(current_pose.pose.orientation.x,current_pose.pose.orientation.y,
-						current_pose.pose.orientation.z,current_pose.pose.orientation.w)
+						# print the orientation
+						# print("current ori", current_pose.pose.orientation.x,current_pose.pose.orientation.y,
+						# current_pose.pose.orientation.z,current_pose.pose.orientation.w)
 						(roll,pitch,yaw) = tft.euler_from_quaternion([current_pose.pose.orientation.x,current_pose.pose.orientation.y,
 						current_pose.pose.orientation.z,current_pose.pose.orientation.w])
-						print("current roll,pitch,yaw")
-						print(roll,pitch,yaw)
+						print("current rpy", roll, pitch, yaw)
+
+
+						'''
 						#get currentpose matrix...
 						currentmatrix = pose_to_matrix(current_pose.pose)
 						currentrot = tft.quaternion_matrix([current_pose.pose.orientation.x, current_pose.pose.orientation.y,
 						current_pose.pose.orientation.z, current_pose.pose.orientation.w])
+
 						#rotation
 						rotmat = tft.quaternion_matrix([transtmp.transform.rotation.x, transtmp.transform.rotation.y,
 						transtmp.transform.rotation.z, transtmp.transform.rotation.w])
+
 						#transform
 						transmat = xyz_to_mat(transtmp.transform.translation.x, transtmp.transform.translation.y, 
 						transtmp.transform.translation.z)
+
 						#transmatrix
 						transmatrix = transmat.dot(rotmat)
+
 						#then currentpose move by this transmatrix..
 						newmat = numpy.linalg.inv(currentmatrix).dot(transmatrix)
+
 						#turn mat to pose		
 						#offset = tf.transformations.translation_matrix((0.01, 0, 0.6))  #with large offset
 						#turnaround = tf.transformations.euler_matrix(0, math.pi, 0)
 						#target_matrix = rel_mat.dot(offset).dot(turnaround)
 						new_pose = matrix_to_pose(newmat)
-						print(new_pose.position.x,new_pose.position.y,new_pose.position.z)
-						print(new_pose.orientation.x,new_pose.orientation.y,new_pose.orientation.z,new_pose.orientation.w)
-
+						print("new_pose", new_pose.position.x,new_pose.position.y,new_pose.position.z)
+						print("new_pose", new_pose.orientation.x,new_pose.orientation.y,new_pose.orientation.z,new_pose.orientation.w)
 
 
                         #new method
@@ -254,13 +268,16 @@ while(1):
 						#target_pose.position.y += -math.cos(roll) * eelink_z 
 						#target_pose.position.z += math.sin(roll) * eelink_z 
 						#target_pose.position.x += math.cos() * eelink_x
+						'''
 						
-						group.set_goal_position_tolerance(0.005)
-						group.set_planning_time(5.0)
-						group.set_goal_position_tolerance(0.0005)
-						group.set_planner_id("PRMkConfigDefault")
-						group.clear_pose_targets()
-						group.set_pose_target(target_pose)
+
+
+						# group.set_goal_position_tolerance(0.005)
+						# group.set_planning_time(5.0)
+						# group.set_goal_position_tolerance(0.0005)
+						# group.set_planner_id("PRMkConfigDefault")
+						# group.clear_pose_targets()
+						# group.set_pose_target(target_pose)
 
 
 
