@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/correspondence.h>
@@ -20,12 +21,15 @@
 #include <pcl/point_types.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/common/common_headers.h>
+#include <pcl/filters/conditional_removal.h>
+#include <pcl/registration/icp.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <jsk_recognition_msgs/BoundingBox.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
+#include <pcl/keypoints/uniform_sampling.h>
 #include <boost/foreach.hpp>
 
 #include <message_filters/subscriber.h>
@@ -169,7 +173,7 @@ class TemplateMatching {
           cg_thresh_(3.0f),
           model_filename_("") {
 
-        ros::param::set("/model_filename","/home/chen/ros/kinetic/src/car_demo/templatematching/data/1.pcd");
+        ros::param::set("/model_filename","/home/chen/ros/kinetic/src/car_demo/templatematching/data/7.pcd");
         ros::param::set("use_cloud_resolution", false);
         ros::param::set("use_hough", false);
         ros::param::set("model_ss",0.01f);
@@ -187,7 +191,7 @@ class TemplateMatching {
         ros::param::param<float>("descr_rad", descr_rad_, 0.01f);
         ros::param::param<float>("cg_size", cg_size_, 0.01f);
         ros::param::param<float>("cg_thresh", cg_thresh_, 3.0f);
-        ros::param::param<std::string>("/model_filename", model_filename_, "/home/chen/ros/kinetic/src/car_demo/templatematching/data/1.pcd");
+        ros::param::param<std::string>("/model_filename", model_filename_, "/home/chen/ros/kinetic/src/car_demo/templatematching/data/7.pcd");
 
 
         transformInitialized = false;
@@ -195,6 +199,7 @@ class TemplateMatching {
         /*** dynamic reconfigure ***/
         f = boost::bind(&TemplateMatching::dynamic_reconfigure_callback, this, _1,_2);
         server.setCallback(f);
+
 
 
         model = pcl::PointCloud<PointType>::Ptr(new pcl::PointCloud<PointType> ());
@@ -207,6 +212,14 @@ class TemplateMatching {
         scene_descriptors = pcl::PointCloud<DescriptorType>::Ptr(new pcl::PointCloud<DescriptorType> ());
 
         pcl::io::loadPCDFile(model_filename_, *model);
+        std::vector<int> index;
+        pcl::removeNaNFromPointCloud(*model, *model, index);
+        pcl::UniformSampling<PointType> filter;
+        filter.setInputCloud(model);
+        filter.setRadiusSearch(0.003f);
+        pcl::PointCloud<int> keypointIndices;
+        filter.compute(keypointIndices);
+        pcl::copyPointCloud(*model, keypointIndices.points, *model);
 
         pub_filtered = n_.advertise<sensor_msgs::PointCloud2>("/cloud_filtered", 1);
         pub_model = n_.advertise<sensor_msgs::PointCloud2>("/cloud_model", 1);
@@ -242,38 +255,16 @@ class TemplateMatching {
         }
     }
 
-    double computeCloudResolution (const pcl::PointCloud<PointType>::ConstPtr &cloud) {
-      double res = 0.0;
-      int n_points = 0;
-      int nres;
-      std::vector<int> indices (2);
-      std::vector<float> sqr_distances (2);
-      pcl::search::KdTree<PointType> tree;
-      tree.setInputCloud (cloud);
-
-      for (size_t i = 0; i < cloud->size (); ++i) {
-        if (! pcl_isfinite ((*cloud)[i].x)) {
-          continue;
-        }
-        //Considering the second neighbor since the first is the point itself.
-        nres = tree.nearestKSearch (i, 2, indices, sqr_distances);
-        if (nres == 2) {
-          res += sqrt (sqr_distances[1]);
-          ++n_points;
-        }
-      }
-      if (n_points != 0) {
-        res /= n_points;
-      }
-      return res;
-    }
-
     pcl::PointCloud<PointType> pointcloudfilter(const pcl::PointCloud<PointType>& pointcloud,
                           const jsk_recognition_msgs::BoundingBoxConstPtr& msg_box) {
         pcl::PointCloud<PointType> ret;
         std::cout << pointcloud.width << ' ' << pointcloud.height <<std::endl;
-        for (int i = msg_box->pose.position.x; i < msg_box->pose.position.x + msg_box->dimensions.x; i++) {
-            for (int j = msg_box->pose.position.y; j < msg_box->pose.position.y + msg_box->dimensions.y; j++) {
+        int min_x = std::max<int>(0, msg_box->pose.position.x - 5);
+        int min_y = std::max<int>(0, msg_box->pose.position.y - 5);
+        int max_x = std::min<int>(pointcloud.width, msg_box->pose.position.x + msg_box->dimensions.y + 5);
+        int max_y = std::min<int>(pointcloud.height, msg_box->pose.position.y + msg_box->dimensions.y + 5);
+        for (int i = min_x; i < max_x; i++) {
+            for (int j = min_y; j < max_y; j++) {
                 ret.push_back(pointcloud.at(i, j));
             }
         }
@@ -320,167 +311,27 @@ class TemplateMatching {
         pcl::toROSMsg(*model, cloudmodel2pub);
         cloudmodel2pub.header = msg_pt->header;
         pub_model.publish(cloudmodel2pub);
-        //
-        //  Set up resolution invariance
-        //
-        if (use_cloud_resolution_) {
-          float resolution = static_cast<float> (computeCloudResolution (model));
-          if (resolution != 0.0f) {
-            model_ss_   *= resolution;
-            scene_ss_   *= resolution;
-            rf_rad_     *= resolution;
-            descr_rad_  *= resolution;
-            cg_size_    *= resolution;
-          }
-
-          std::cout << "Model resolution:       " << resolution << std::endl;
-          std::cout << "Model sampling size:    " << model_ss_ << std::endl;
-          std::cout << "Scene sampling size:    " << scene_ss_ << std::endl;
-          std::cout << "LRF support radius:     " << rf_rad_ << std::endl;
-          std::cout << "SHOT descriptor radius: " << descr_rad_ << std::endl;
-          std::cout << "Clustering bin size:    " << cg_size_ << std::endl << std::endl;
-        }
-
-        //
-        //  Compute Normals
-        //
-        pcl::NormalEstimationOMP<PointType, NormalType> norm_est;
-        norm_est.setKSearch (10);
-        norm_est.setInputCloud (model);
-        norm_est.compute (*model_normals);
-
-        norm_est.setInputCloud (scene);
-        norm_est.compute (*scene_normals);
-
-        pcl::UniformSampling<PointType> uniform_sampling;
-        uniform_sampling.setInputCloud (model);
-        uniform_sampling.setRadiusSearch (model_ss_);
-        //uniform_sampling.filter (*model_keypoints);
-        pcl::PointCloud<int> keypointIndices1;
-        uniform_sampling.compute(keypointIndices1);
-        pcl::copyPointCloud(*model, keypointIndices1.points, *model_keypoints);
-        std::cout << "Model total points: " << model->size () << "; Selected Keypoints: " << model_keypoints->size () << std::endl;
 
 
-        uniform_sampling.setInputCloud (scene);
-        uniform_sampling.setRadiusSearch (scene_ss_);
-        //uniform_sampling.filter (*scene_keypoints);
-        pcl::PointCloud<int> keypointIndices2;
-        uniform_sampling.compute(keypointIndices2);
-        pcl::copyPointCloud(*scene, keypointIndices2.points, *scene_keypoints);
-        std::cout << "Scene total points: " << scene->size () << "; Selected Keypoints: " << scene_keypoints->size () << std::endl;
+        // ICP
+        pcl::IterativeClosestPoint<PointType, PointType> icp;
+        icp.setInputSource(model);
+        icp.setInputTarget(scene);
+        pcl::PointCloud<PointType> Final;
+        icp.align(Final);
+        if (icp.hasConverged()) {
+            std::cout << "has converged:" << icp.hasConverged() << " score: " <<
+            icp.getFitnessScore() << std::endl;
+            std::cout << icp.getFinalTransformation() << std::endl;
+            // Publish:
 
-        //
-        //  Compute Descriptor for keypoints
-        //
-        pcl::SHOTEstimationOMP<PointType, NormalType, DescriptorType> descr_est;
-        descr_est.setRadiusSearch (descr_rad_);
-
-        descr_est.setInputCloud (model_keypoints);
-        descr_est.setInputNormals (model_normals);
-        descr_est.setSearchSurface (model);
-        descr_est.compute (*model_descriptors);
-
-        descr_est.setInputCloud (scene_keypoints);
-        descr_est.setInputNormals (scene_normals);
-        descr_est.setSearchSurface (scene);
-        descr_est.compute (*scene_descriptors);
-
-        //
-        //  Find Model-Scene Correspondences with KdTree
-        //
-        pcl::CorrespondencesPtr model_scene_corrs (new pcl::Correspondences ());
-
-        pcl::KdTreeFLANN<DescriptorType> match_search;
-        match_search.setInputCloud (model_descriptors);
-
-        //  For each scene keypoint descriptor, find nearest neighbor into the model keypoints descriptor cloud and add it to the correspondences vector.
-        for (size_t i = 0; i < scene_descriptors->size (); ++i)
-        {
-          std::vector<int> neigh_indices (1);
-          std::vector<float> neigh_sqr_dists (1);
-          if (!pcl_isfinite (scene_descriptors->at (i).descriptor[0])) //skipping NaNs
-          {
-            continue;
-          }
-          int found_neighs = match_search.nearestKSearch (scene_descriptors->at (i), 1, neigh_indices, neigh_sqr_dists);
-          if(found_neighs == 1 && neigh_sqr_dists[0] < 0.25f) //  add match only if the squared descriptor distance is less than 0.25 (SHOT descriptor distances are between 0 and 1 by design)
-          {
-            pcl::Correspondence corr (neigh_indices[0], static_cast<int> (i), neigh_sqr_dists[0]);
-            model_scene_corrs->push_back (corr);
-          }
-        }
-        std::cout << "Correspondences found: " << model_scene_corrs->size () << std::endl;
-
-        //
-        //  Actual Clustering
-        //
-        std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > rototranslations;
-        std::vector<pcl::Correspondences> clustered_corrs;
-
-        //  Using Hough3D
-        if (use_hough_) {
-          //
-          //  Compute (Keypoints) Reference Frames only for Hough
-          //
-          pcl::PointCloud<RFType>::Ptr model_rf (new pcl::PointCloud<RFType> ());
-          pcl::PointCloud<RFType>::Ptr scene_rf (new pcl::PointCloud<RFType> ());
-
-          pcl::BOARDLocalReferenceFrameEstimation<PointType, NormalType, RFType> rf_est;
-          rf_est.setFindHoles (true);
-          rf_est.setRadiusSearch (rf_rad_);
-
-          rf_est.setInputCloud (model_keypoints);
-          rf_est.setInputNormals (model_normals);
-          rf_est.setSearchSurface (model);
-          rf_est.compute (*model_rf);
-
-          rf_est.setInputCloud (scene_keypoints);
-          rf_est.setInputNormals (scene_normals);
-          rf_est.setSearchSurface (scene);
-          rf_est.compute (*scene_rf);
-
-          //  Clustering
-          pcl::Hough3DGrouping<PointType, PointType, RFType, RFType> clusterer;
-          clusterer.setHoughBinSize (cg_size_);
-          clusterer.setHoughThreshold (cg_thresh_);
-          clusterer.setUseInterpolation (true);
-          clusterer.setUseDistanceWeight (false);
-
-          clusterer.setInputCloud (model_keypoints);
-          clusterer.setInputRf (model_rf);
-          clusterer.setSceneCloud (scene_keypoints);
-          clusterer.setSceneRf (scene_rf);
-          clusterer.setModelSceneCorrespondences (model_scene_corrs);
-
-          //clusterer.cluster (clustered_corrs);
-          clusterer.recognize (rototranslations, clustered_corrs);
-        }
-        else {// Using GeometricConsistency
-          pcl::GeometricConsistencyGrouping<PointType, PointType> gc_clusterer;
-          gc_clusterer.setGCSize (cg_size_);
-          gc_clusterer.setGCThreshold (cg_thresh_);
-
-          gc_clusterer.setInputCloud (model_keypoints);
-          gc_clusterer.setSceneCloud (scene_keypoints);
-          gc_clusterer.setModelSceneCorrespondences (model_scene_corrs);
-
-          //gc_clusterer.cluster (clustered_corrs);
-          gc_clusterer.recognize (rototranslations, clustered_corrs);
-        }
-
-        // Publish:
-
-
-        for (size_t i = 0; i < rototranslations.size (); ++i)
-        {
+            pcl::Registration<PointType, PointType, float>::Matrix4 result = icp.getFinalTransformation();
             geometry_msgs::TransformStamped trans_msg;
-            Eigen::Matrix3f rotation = rototranslations[i].block<3,3>(0, 0);
-            Eigen::Vector3f translation = rototranslations[i].block<3,1>(0, 3);
+
             tf::Quaternion q;
-            tf::Matrix3x3 mat(rotation (0,0), rotation (0,1), rotation (0,2),
-                              rotation (1,0), rotation (1,1), rotation (1,2),
-                              rotation (2,0), rotation (2,1), rotation (2,2));
+            tf::Matrix3x3 mat(result(0,0), result (0,1), result (0,2),
+                              result (1,0), result (1,1), result (1,2),
+                              result (2,0), result (2,1), result (2,2));
 
             mat.getRotation(q); //turn to quaternion
             tfScalar r, p, y;
@@ -490,22 +341,24 @@ class TemplateMatching {
             trans_msg.transform.rotation.y = q.getY();
             trans_msg.transform.rotation.z = q.getZ();
             trans_msg.transform.rotation.w = q.getW();
-            trans_msg.transform.translation.x = translation (0);
-            trans_msg.transform.translation.y = translation (1);
-            trans_msg.transform.translation.z = translation (2);
+
+            trans_msg.transform.translation.x = result(0, 3);
+            trans_msg.transform.translation.y = result(1, 3);
+            trans_msg.transform.translation.z = result(2, 3);
             trans_msg.header = msg_pt->header;
             trans_msg.child_frame_id = "charge_model_link";
-            if (rotation(0,0) > 0.7 && rotation(1,1) > 0.85 && rotation(2,2) > 0.85 && rotation(0,0) != 1) {
-                transformColorBased.setOrigin(tf::Vector3(translation(0), translation(1), translation(2)));
-                transformColorBased.setRotation(q);
-                transformInitialized = true;
-                pub_trans.publish(trans_msg);
-            }
+
+                //transformColorBased.setOrigin(tf::Vector3(result(0, 3), result(1, 3), result(2, 3)));
+            //need to adjust the offset
+            transformColorBased.setOrigin(tf::Vector3(result(0, 3), result(1, 3), result(2, 3)+0.2));
+            transformColorBased.setRotation(q);
+            transformInitialized = true;
+            pub_trans.publish(trans_msg);
         }
+
         if (transformInitialized) {
             br.sendTransform(tf::StampedTransform(transformColorBased, msg_pt->header.stamp, "color", "charger"));
         }
-        output(rototranslations, clustered_corrs);
     }
 
 private:

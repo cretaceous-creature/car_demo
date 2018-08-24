@@ -49,7 +49,7 @@ def matrix_to_pose(matrix):
 def transcallback(data):
 	global transtmp 
 	transtmp = data
-	print(transtmp.transform.translation.x,transtmp.transform.translation.y,transtmp.transform.translation.z)
+	#print(transtmp.transform.translation.x,transtmp.transform.translation.y,transtmp.transform.translation.z)
 
 rospy.init_node('move_group_python_interface_tutorial',anonymous=True)
 rospy.Subscriber('/matching_trans', TransformStamped, transcallback)
@@ -207,6 +207,12 @@ while(1):
 							print("tf_trans", trans)
 						except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
 							continue
+						print("transform:",trans)
+						print("rot:",rot)
+
+						#print("rot quaternion:",q)
+
+
 						# here we automatically attach the robot to the charger
 						current_pose = group.get_current_pose()
 						offset = tf.transformations.translation_matrix((0, 0.05, 0.05))
@@ -217,67 +223,27 @@ while(1):
 						# print the position
 						print("gt pose", target_pose.position.x,target_pose.position.y,
 						target_pose.position.z)		
-						# print the orientation
-						# print("current ori", current_pose.pose.orientation.x,current_pose.pose.orientation.y,
-						# current_pose.pose.orientation.z,current_pose.pose.orientation.w)
-						(roll,pitch,yaw) = tft.euler_from_quaternion([current_pose.pose.orientation.x,current_pose.pose.orientation.y,
-						current_pose.pose.orientation.z,current_pose.pose.orientation.w])
-						print("current rpy", roll, pitch, yaw)
 
+						
+						target_pose.position.x = trans[0]
+						target_pose.position.y = trans[1]
+						target_pose.position.z = trans[2]
+						target_pose.orientation.x = rot[0]
+						target_pose.orientation.y = rot[1]
+						target_pose.orientation.z = rot[2]
+						target_pose.orientation.w = rot[3]
 
-						'''
-						#get currentpose matrix...
-						currentmatrix = pose_to_matrix(current_pose.pose)
-						currentrot = tft.quaternion_matrix([current_pose.pose.orientation.x, current_pose.pose.orientation.y,
-						current_pose.pose.orientation.z, current_pose.pose.orientation.w])
-
-						#rotation
-						rotmat = tft.quaternion_matrix([transtmp.transform.rotation.x, transtmp.transform.rotation.y,
-						transtmp.transform.rotation.z, transtmp.transform.rotation.w])
-
-						#transform
-						transmat = xyz_to_mat(transtmp.transform.translation.x, transtmp.transform.translation.y, 
-						transtmp.transform.translation.z)
-
-						#transmatrix
-						transmatrix = transmat.dot(rotmat)
-
-						#then currentpose move by this transmatrix..
-						newmat = numpy.linalg.inv(currentmatrix).dot(transmatrix)
-
-						#turn mat to pose		
-						#offset = tf.transformations.translation_matrix((0.01, 0, 0.6))  #with large offset
-						#turnaround = tf.transformations.euler_matrix(0, math.pi, 0)
-						#target_matrix = rel_mat.dot(offset).dot(turnaround)
-						new_pose = matrix_to_pose(newmat)
-						print("new_pose", new_pose.position.x,new_pose.position.y,new_pose.position.z)
-						print("new_pose", new_pose.orientation.x,new_pose.orientation.y,new_pose.orientation.z,new_pose.orientation.w)
-
-
-                        #new method
-						eelink_x = - transtmp.transform.translation.x
-						eelink_y = - transtmp.transform.translation.y
-						eelink_z =  transtmp.transform.translation.z
-						eelink_mat = xyz_to_mat(-transtmp.transform.translation.x, -transtmp.transform.translation.y + 0.06, 
-						transtmp.transform.translation.z)
-						eelink_trans = eelink_mat.dot(currentrot)
-						eelink_pose = matrix_to_pose( numpy.linalg.inv(currentrot).dot(eelink_trans) )
-						print(eelink_pose.position.x,eelink_pose.position.y,eelink_pose.position.z)
-
-
-						#target_pose.position.y += -math.cos(roll) * eelink_z 
-						#target_pose.position.z += math.sin(roll) * eelink_z 
-						#target_pose.position.x += math.cos() * eelink_x
-						'''
+						print("gt pose by vision:", target_pose.position.x,target_pose.position.y,
+						target_pose.position.z)	
 						
 
 
-						# group.set_goal_position_tolerance(0.005)
-						# group.set_planning_time(5.0)
-						# group.set_goal_position_tolerance(0.0005)
-						# group.set_planner_id("PRMkConfigDefault")
-						# group.clear_pose_targets()
-						# group.set_pose_target(target_pose)
+						group.set_goal_position_tolerance(0.005)
+						group.set_planning_time(5.0)
+						group.set_goal_position_tolerance(0.0005)
+						group.set_planner_id("PRMkConfigDefault")
+						group.clear_pose_targets()
+						group.set_pose_target(target_pose)
 
 
 
